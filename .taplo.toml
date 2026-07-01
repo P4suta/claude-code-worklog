@@ -1,0 +1,20 @@
+# taplo: TOML formatter configuration.
+# https://taplo.tamasfe.dev/configuration/file.html
+
+include = ["**/*.toml"]
+exclude = ["target/**", "node_modules/**"]
+
+[formatting]
+align_entries = false
+align_comments = true
+array_trailing_comma = true
+array_auto_expand = true
+array_auto_collapse = true
+compact_arrays = true
+compact_inline_tables = false
+column_width = 100
+indent_string = "    "
+trailing_newline = true
+reorder_keys = false
+reorder_arrays = false
+allowed_blank_lines = 2

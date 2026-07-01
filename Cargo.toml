@@ -1,0 +1,89 @@
+[workspace]
+resolver = "3"
+members = ["crates/worklog-cli", "crates/worklog-core"]
+default-members = ["crates/worklog-core", "crates/worklog-cli"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.95"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/P4suta/claude-code-worklog"
+authors = ["cc-worklog contributors"]
+
+[workspace.dependencies]
+# --- in-house crates ---
+worklog-core = { path = "crates/worklog-core" }
+
+# --- date / time ---
+jiff = { version = "0.2", features = ["serde"] }
+
+# --- serialization ---
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# --- filesystem locations ---
+directories = "6"
+
+# --- CLI ---
+clap = { version = "4", features = ["derive", "env"] }
+clap_complete = "4"
+clap_mangen = "0.3"
+
+# --- CLI UX ---
+comfy-table = "7"
+owo-colors = { version = "4", features = ["supports-colors"] }
+
+# --- errors / logging ---
+miette = { version = "7", features = ["fancy"] }
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# --- dev / testing ---
+assert_cmd = "2"
+insta = { version = "1", features = ["json", "yaml"] }
+predicates = "3"
+tempfile = "3"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+
+wildcard_imports = "deny"
+mod_module_files = "deny"
+or_fun_call = "deny"
+unwrap_used = "deny"
+expect_used = "warn"
+panic = "warn"
+todo = "warn"
+unimplemented = "warn"
+dbg_macro = "deny"
+print_stdout = "warn"
+print_stderr = "warn"
+allow_attributes_without_reason = "deny"
+disallowed_macros = "deny"
+disallowed_types = "deny"
+disallowed_methods = "deny"
+
+module_name_repetitions = "allow"
+multiple_crate_versions = "allow"
+cargo_common_metadata = "allow"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+unreachable_pub = "warn"
+elided_lifetimes_in_paths = "warn"
+single_use_lifetimes = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+static_mut_refs = "deny"
+missing_docs = "warn"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+opt-level = 3

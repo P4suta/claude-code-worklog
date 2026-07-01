@@ -1,0 +1,35 @@
+[package]
+name = "worklog-cli"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "CLI that turns Claude Code session logs into daily and continuous work reports."
+publish = false
+
+[[bin]]
+name = "worklog"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+clap_complete.workspace = true
+clap_mangen.workspace = true
+comfy-table.workspace = true
+jiff.workspace = true
+miette.workspace = true
+serde_json.workspace = true
+tracing-subscriber.workspace = true
+worklog-core.workspace = true
+
+[dev-dependencies]
+assert_cmd.workspace = true
+insta.workspace = true
+predicates.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

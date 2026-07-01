@@ -1,0 +1,36 @@
+# lefthook — git hooks. Install once with `just hooks`.
+#
+# Formatters run with stage_fixed: the author writes code, lefthook fixes
+# formatting on the way to the index. CI re-runs the same checks in --check mode.
+
+assert_lefthook_installed: true
+
+pre-commit:
+  parallel: false
+  commands:
+    cargo-fmt:
+      glob: "*.rs"
+      run: cargo fmt -- {staged_files}
+      stage_fixed: true
+    taplo-fmt:
+      glob: "*.toml"
+      run: taplo fmt {staged_files}
+      stage_fixed: true
+    cargo-sort:
+      glob: "{**/Cargo.toml,Cargo.lock}"
+      run: cargo sort --workspace --grouped
+      stage_fixed: true
+    typos-fix:
+      run: typos --write-changes {staged_files}
+      stage_fixed: true
+    clippy:
+      glob: "*.rs"
+      run: cargo clippy --workspace --all-targets -- -D warnings
+
+pre-push:
+  piped: true
+  commands:
+    lint:
+      run: just lint
+    test:
+      run: just test

@@ -1,0 +1,29 @@
+[package]
+name = "worklog-core"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Core library: parse Claude Code transcripts and build daily/continuous work reports."
+publish = false
+
+[lib]
+name = "worklog_core"
+path = "src/lib.rs"
+
+[dependencies]
+directories.workspace = true
+jiff.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true
