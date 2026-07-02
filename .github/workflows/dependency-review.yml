@@ -1,0 +1,52 @@
+# Dependency review on pull requests.
+#
+# Complements the cargo-deny gate: `deny` checks the whole workspace against our
+# license + advisory rules, while dependency-review focuses on what a PR *adds*
+# and surfaces it in the review UI. The license allow-list mirrors deny.toml;
+# cargo-deny remains the source of truth.
+#
+# Actions are pinned to a full commit SHA (the `# vX.Y.Z` trailer is the tag);
+# Dependabot's github-actions ecosystem keeps them current.
+
+name: dependency-review
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: dependency review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          # Reject any newly introduced advisory of moderate severity or worse.
+          fail-on-severity: moderate
+          # Mirror deny.toml's license allow-list (cargo-deny is authoritative).
+          allow-licenses: >-
+            MIT,
+            Apache-2.0,
+            Apache-2.0 WITH LLVM-exception,
+            BSD-2-Clause,
+            BSD-3-Clause,
+            BSL-1.0,
+            ISC,
+            Unicode-DFS-2016,
+            Unicode-3.0,
+            Zlib,
+            CC0-1.0,
+            MPL-2.0,
+            0BSD,
+            Unlicense,
+            CDLA-Permissive-2.0
+          # CI-only JS action, not linked into the product — exempt from the
+          # license check (mirrors deny.toml scope).
+          allow-dependencies-licenses: >-
+            pkg:githubactions/Swatinem/rust-cache
+          comment-summary-in-pr: on-failure

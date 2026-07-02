@@ -5,6 +5,13 @@
 
 assert_lefthook_installed: true
 
+commit-msg:
+  commands:
+    # Conventional Commits via `committed` (config in committed.toml). `{1}` is
+    # the commit-message file path. The CI `commitlint` job runs the same check.
+    committed:
+      run: committed --commit-file {1}
+
 pre-commit:
   parallel: false
   commands:

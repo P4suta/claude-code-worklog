@@ -1,0 +1,6 @@
+name: cc-worklog CodeQL config
+
+# Run the extended query suite (adds maintainability / quality queries on top of
+# the default security set) for deeper coverage than the CodeQL default.
+queries:
+  - uses: security-and-quality

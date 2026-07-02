@@ -1,0 +1,6 @@
+# Everything is text, normalised to LF in the repo (avoids CRLF churn on
+# Windows checkouts).
+* text=auto eol=lf
+
+# License text stays LF even on Windows checkouts.
+LICENSE-*  text eol=lf

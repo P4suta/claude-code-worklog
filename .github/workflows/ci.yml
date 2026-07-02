@@ -115,13 +115,33 @@ jobs:
         with:
           command: check advisories bans licenses sources
 
+  # Conventional Commits (committed, config in committed.toml). PR-only, and
+  # skipped for Dependabot (its subjects exceed the 50-char limit and its PRs
+  # squash-merge under a maintainer subject).
+  commitlint:
+    name: commitlint
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+      - uses: taiki-e/install-action@16b05812d776ae1dfaabc8277e421fb6d2506419 # v2.82.7
+        with:
+          tool: committed
+      - name: Check Conventional Commits
+        run: |
+          base='${{ github.event.pull_request.base.sha }}'
+          head='${{ github.event.pull_request.head.sha }}'
+          git rev-list --no-merges "$base..$head" | xargs -rn1 committed
+
   # Single required check for branch protection: green only when every needed
   # job succeeded. `if: always()` so it still runs (and can fail) when an
   # upstream job fails or is cancelled.
   ci:
     name: ci
     if: always()
-    needs: [lint, test, msrv, deny]
+    needs: [lint, test, msrv, deny, commitlint]
     runs-on: ubuntu-latest
     steps:
       - name: Verify all jobs succeeded
