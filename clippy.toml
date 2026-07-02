@@ -21,4 +21,4 @@ disallowed-types = [
     { path = "once_cell::sync::Lazy", reason = "use std::sync::LazyLock (stable since 1.80)" },
     { path = "once_cell::sync::OnceCell", reason = "use std::sync::OnceLock (stable since 1.70)" },
 ]
-disallowed-methods = [{ path = "std::env::set_var", reason = "boundary 以外で環境変数を変更しない" }]
+disallowed-methods = [{ path = "std::env::set_var", reason = "do not mutate env vars outside a boundary" }]

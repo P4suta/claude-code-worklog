@@ -3,7 +3,7 @@
 //! Pulls the day's turns from the stored stream and, unless `--no-backfill`,
 //! re-scans the raw transcripts so sessions that ended without a hook firing
 //! still appear. The two sources are merged and deduplicated by turn id. In the
-//! exec view it also builds a trailing-window **baseline** so the `要注意` flags
+//! exec view it also builds a trailing-window **baseline** so the attention flags
 //! fire relative to the user's own normal rather than absolute guesses.
 
 use std::path::PathBuf;
@@ -55,7 +55,7 @@ pub(crate) struct DailyArgs {
     #[arg(long)]
     no_store: bool,
 
-    /// Trailing days used to compute the "平常" baseline for `要注意` flags.
+    /// Trailing days used to compute the baseline for the attention flags.
     #[arg(long, default_value_t = 28)]
     baseline_days: u32,
 

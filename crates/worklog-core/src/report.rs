@@ -41,13 +41,13 @@ pub struct RenderOptions<'a> {
     pub style: Style,
     /// Prior-period comparison for trend lines (exec only; `None` for daily).
     pub trend: Option<&'a TrendData>,
-    /// Trailing-window baseline for "平常比" flags (exec daily; `None` disables).
+    /// Trailing-window baseline for the attention flags (exec daily; `None` disables).
     pub baseline: Option<&'a Baseline>,
 }
 
-/// A prior period's totals, for "前期比" trend lines.
+/// A prior period's totals, for the trend lines.
 pub struct TrendData {
-    /// How to label the comparison, e.g. `"先週比"` / `"先月比"`.
+    /// Label for the prior-period comparison.
     pub label: String,
     /// Deliverables across the whole prior period.
     pub prev_total: Deliverables,
@@ -210,7 +210,7 @@ fn attention_flags(digests: &[SessionDigest], baseline: Option<&Baseline>) -> Ve
     flags
 }
 
-/// The "平常比" summary line: today's ship volume against the baseline daily average.
+/// The baseline-relative summary line: today's ship volume against the baseline daily average.
 fn normal_line(today: &Deliverables, base: &Baseline) -> String {
     let ship = today.prs_merged + today.commits;
     let avg = base.prs_merged_per_day() + base.commits_per_day();
@@ -269,7 +269,6 @@ fn render_exec_block(
     Ok(())
 }
 
-/// The signed delta `cur - prev`.
 fn delta(cur: u32, prev: u32) -> i64 {
     i64::from(cur) - i64::from(prev)
 }
@@ -284,7 +283,7 @@ fn delta_part(name: &str, cur: u32, prev: u32) -> Option<String> {
     }
 }
 
-/// The whole-report trend line (always shown; "横ばい" when nothing moved, and a
+/// The whole-report trend line (always shown; "flat" when nothing moved, and a
 /// note when there is no prior period at all).
 fn trend_line(cur: &Deliverables, prev: &Deliverables) -> String {
     if prev.is_empty() {
@@ -350,7 +349,7 @@ fn render_process(out: &mut String, digest: &SessionDigest) -> std::fmt::Result 
     Ok(())
 }
 
-/// `探索X% 実装Y% 検証Z%`, or `None` when there was no measurable activity.
+/// The explore/implement/verify effort split, or `None` when there was no measurable activity.
 fn effort_line(mix: EffortMix) -> Option<String> {
     let total = mix.total();
     if total == 0 {
@@ -368,7 +367,7 @@ fn effort_line(mix: EffortMix) -> Option<String> {
 /// How many work-item highlights to list per block before summarizing the rest.
 const HIGHLIGHT_LIMIT: usize = 8;
 
-/// Render the "やったこと" list of commit subjects and PR titles.
+/// Render the highlights list of commit subjects and PR titles.
 fn render_highlights(out: &mut String, highlights: &[String]) -> std::fmt::Result {
     if highlights.is_empty() {
         return Ok(());
@@ -384,7 +383,7 @@ fn render_highlights(out: &mut String, highlights: &[String]) -> std::fmt::Resul
     Ok(())
 }
 
-/// `- ⚠ 注意:` content (reverts / force pushes), or `None` if clean.
+/// The risk line content (reverts / force pushes), or `None` if clean.
 fn risk_line(d: &Deliverables) -> Option<String> {
     let mut parts = Vec::new();
     if d.reverts > 0 {
@@ -409,7 +408,7 @@ fn memory_notes(digest: &SessionDigest, memory: &HashMap<String, String>) -> Vec
     notes
 }
 
-/// `- 変更:` content: file count plus the top changed areas.
+/// The "changed" line content: file count plus the top changed areas.
 fn changed_line(digest: &SessionDigest) -> String {
     let areas = top_areas(&digest.files_touched, digest.cwd.as_deref(), TOP_AREAS);
     let detail = areas
@@ -424,7 +423,7 @@ fn changed_line(digest: &SessionDigest) -> String {
     }
 }
 
-/// `- 出荷:` content, or `None` if nothing shipped. `with_refs` appends the
+/// The "shipped" line content, or `None` if nothing shipped. `with_refs` appends the
 /// merged PR numbers (used per project, omitted in the cross-project summary).
 fn shipped_line(d: &Deliverables, with_refs: bool) -> Option<String> {
     let mut parts = Vec::new();
@@ -451,7 +450,7 @@ fn shipped_line(d: &Deliverables, with_refs: bool) -> Option<String> {
     join_parts(&parts)
 }
 
-/// `- 検証:` content, or `None` if nothing was tested or built.
+/// The "verified" line content, or `None` if nothing was tested or built.
 fn verified_line(d: &Deliverables) -> Option<String> {
     let mut parts = Vec::new();
     if d.tests > 0 {
@@ -494,12 +493,10 @@ fn sum_deliverables(digests: &[SessionDigest]) -> Deliverables {
     total
 }
 
-/// The earliest block start, if any.
 fn min_start(digests: &[SessionDigest]) -> Option<Timestamp> {
     digests.iter().map(|d| d.start).min()
 }
 
-/// The latest block end, if any.
 fn max_end(digests: &[SessionDigest]) -> Option<Timestamp> {
     digests.iter().map(|d| d.end).max()
 }
@@ -700,7 +697,7 @@ mod tests {
     fn exec_renders_trend_line() {
         let digests = merge_by_project(aggregate(entries_from_events(&parse_events(SAMPLE))));
         let memory = HashMap::new();
-        // Prior period: 0 merges, 3 commits → expect PRマージ +1, commit -2.
+        // Prior period: 0 merges, 3 commits → expect merged PRs +1, commits -2.
         let prev = Deliverables {
             commits: 3,
             ..Deliverables::default()

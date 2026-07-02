@@ -1,10 +1,6 @@
-//! The summarizer seam — present, and deliberately inert by default.
-//!
-//! The whole point of this tool is to build reports by **structured extraction**,
-//! not by asking a model. But a future caller may want to layer an LLM pass on
-//! top (e.g. behind a `--summarize` flag), so the rendering path takes a
-//! [`Summarizer`]. The default [`NullSummarizer`] returns nothing, so reports stay
-//! purely mechanical unless someone opts in.
+//! Optional summarizer seam for a future LLM pass. The rendering path takes a
+//! [`Summarizer`]; the default [`NullSummarizer`] returns nothing, so reports
+//! stay purely mechanical unless a caller opts in.
 
 use crate::digest::SessionDigest;
 

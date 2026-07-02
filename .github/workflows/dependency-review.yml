@@ -1,12 +1,5 @@
-# Dependency review on pull requests.
-#
-# Complements the cargo-deny gate: `deny` checks the whole workspace against our
-# license + advisory rules, while dependency-review focuses on what a PR *adds*
-# and surfaces it in the review UI. The license allow-list mirrors deny.toml;
-# cargo-deny remains the source of truth.
-#
-# Actions are pinned to a full commit SHA (the `# vX.Y.Z` trailer is the tag);
-# Dependabot's github-actions ecosystem keeps them current.
+# Dependency review on PRs: flags what a PR adds, complementing the cargo-deny
+# gate. The license allow-list mirrors deny.toml, which stays the source of truth.
 
 name: dependency-review
 
