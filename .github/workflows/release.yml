@@ -1,0 +1,177 @@
+# Tag-driven binary release.
+#
+# Push a `vX.Y.Z` tag (or run manually) and this builds `worklog` for four
+# targets, bundles each with shell completions, man pages, the README, and the
+# licenses, then publishes the archives to a GitHub Release with a SHA256SUMS
+# manifest and a keyless Sigstore build-provenance attestation.
+#
+# Each target builds natively on its own runner, so the freshly built binary is
+# runnable there to emit its own completions/man pages (no cross-exec).
+#
+# Verify a downloaded archive:
+#   gh attestation verify <archive> --repo P4suta/claude-code-worklog
+
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - id: v
+        shell: bash
+        # On a tag build use the tag (minus the leading `v`); a manual run has
+        # no tag, so fall back to the workspace version with a `-dev` marker.
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)-dev"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Release version: $version"
+
+  build:
+    needs: meta
+    name: build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-apple-darwin
+            os: macos-15-intel
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+        with:
+          key: release-${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --locked -p worklog-cli --target ${{ matrix.target }}
+
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          name="worklog-${VERSION}-${TARGET}"
+          stage="dist/${name}"
+          bin="target/${TARGET}/release/worklog"
+          mkdir -p "${stage}/completions" "${stage}/man"
+          cp "${bin}" "${stage}/"
+          "${bin}" completions bash       > "${stage}/completions/worklog.bash"
+          "${bin}" completions zsh        > "${stage}/completions/_worklog"
+          "${bin}" completions fish       > "${stage}/completions/worklog.fish"
+          "${bin}" completions powershell > "${stage}/completions/_worklog.ps1"
+          "${bin}" man "${stage}/man"
+          cp README.md CHANGELOG.md LICENSE-MIT LICENSE-APACHE "${stage}/"
+          tar -C dist -czf "dist/${name}.tar.gz" "${name}"
+          ( cd dist && shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256" )
+
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $name  = "worklog-$env:VERSION-$env:TARGET"
+          $stage = "dist/$name"
+          $bin   = "target/$env:TARGET/release/worklog.exe"
+          New-Item -ItemType Directory -Force -Path "$stage/completions", "$stage/man" | Out-Null
+          Copy-Item $bin "$stage/"
+          & $bin completions bash       | Out-File -Encoding utf8 "$stage/completions/worklog.bash"
+          & $bin completions zsh        | Out-File -Encoding utf8 "$stage/completions/_worklog"
+          & $bin completions fish       | Out-File -Encoding utf8 "$stage/completions/worklog.fish"
+          & $bin completions powershell | Out-File -Encoding utf8 "$stage/completions/_worklog.ps1"
+          & $bin man "$stage/man"
+          Copy-Item README.md, CHANGELOG.md, LICENSE-MIT, LICENSE-APACHE "$stage/"
+          Compress-Archive -Path "$stage" -DestinationPath "dist/$name.zip"
+          (Get-FileHash "dist/$name.zip" -Algorithm SHA256).Hash.ToLower() + "  $name.zip" |
+            Out-File -Encoding ascii "dist/$name.zip.sha256"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: worklog-${{ matrix.target }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+          if-no-files-found: error
+
+  release:
+    needs: [meta, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub Release
+      id-token: write # keyless Sigstore signing
+      attestations: write # record the build-provenance attestation
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Assemble release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          find artifacts -type f \( -name '*.tar.gz' -o -name '*.zip' \) -exec cp {} dist/ \;
+          ( cd dist && sha256sum -- *.tar.gz *.zip > SHA256SUMS.txt )
+          echo "Assets:" && ls -1 dist
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
+        with:
+          draft: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/SHA256SUMS.txt

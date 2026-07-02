@@ -1,0 +1,28 @@
+version: 2
+updates:
+  # Rust dependencies. Minor/patch bumps are grouped into one PR to cut noise;
+  # majors still open individually so they get a deliberate look.
+  - package-ecosystem: cargo
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "02:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 10
+    groups:
+      rust-deps:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # Keep the SHA-pinned GitHub Actions fresh; the human-readable `# vX.Y.Z`
+  # trailer comments are updated alongside the SHA.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      actions:
+        patterns: ["*"]

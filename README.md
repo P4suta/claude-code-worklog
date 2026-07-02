@@ -1,5 +1,9 @@
 # cc-worklog
 
+[![CI](https://github.com/P4suta/claude-code-worklog/actions/workflows/ci.yml/badge.svg)](https://github.com/P4suta/claude-code-worklog/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/P4suta/claude-code-worklog/actions/workflows/codeql.yml/badge.svg)](https://github.com/P4suta/claude-code-worklog/actions/workflows/codeql.yml)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
+
 Turn your Claude Code session logs into a **daily report** (日報) and a
 **continuous stream** (分報) — without writing them by hand, and without an LLM.
 

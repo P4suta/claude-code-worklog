@@ -1,27 +1,54 @@
-name: CI
+# cc-worklog CI.
+#
+# Layers, cheapest first:
+#   - lint    : fmt / clippy / typos / machete on ubuntu (fast fail).
+#   - test    : cargo test across ubuntu + windows + macos (paths.rs and the
+#               CLI touch OS-specific path handling, so all three matter).
+#   - msrv    : the pinned MSRV (1.95.0) still builds.
+#   - deny    : cargo-deny advisories / bans / licenses / sources.
+#   - ci      : single aggregate gate for branch protection.
+#
+# Third-party actions are pinned to a full commit SHA; the `# vX.Y.Z` trailer
+# is the human-readable tag. Dependabot (github-actions) bumps them weekly.
+
+name: ci
 
 on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: "1"
 
 jobs:
-  check:
-    name: fmt + clippy + test
+  lint:
+    name: fmt + clippy + typos + machete
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
         with:
+          toolchain: stable
           components: rustfmt, clippy
 
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+
+      - name: Install typos + cargo-machete
+        uses: taiki-e/install-action@efd8b64311f7a0a9b888ed13d0df78ec9184c163 # v2.62.11
+        with:
+          tool: typos-cli, cargo-machete
 
       - name: rustfmt
         run: cargo fmt --all -- --check
@@ -29,16 +56,74 @@ jobs:
       - name: clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
+      - name: typos
+        run: typos
+
+      - name: cargo-machete
+        run: cargo machete
+
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+
       - name: test
         run: |
           cargo test --workspace
           cargo test --doc --workspace
 
+  msrv:
+    name: msrv (rust 1.95.0)
+    runs-on: ubuntu-latest
+    # RUSTUP_TOOLCHAIN outranks rust-toolchain.toml (which pins `stable`), so
+    # the build genuinely exercises a clean rustc 1.95.0 — the declared MSRV.
+    env:
+      RUSTUP_TOOLCHAIN: 1.95.0
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Install Rust 1.95.0 (MSRV)
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
+        with:
+          toolchain: 1.95.0
+
+      - uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
+        with:
+          key: msrv
+
+      - name: cargo check
+        run: cargo check --workspace --all-targets
+
   deny:
     name: cargo-deny
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: EmbarkStudios/cargo-deny-action@3fd3802e88374d3fe9159b834c7714ec57d6c979 # v2.0.15
         with:
           command: check advisories bans licenses sources
+
+  # Single required check for branch protection: green only when every needed
+  # job succeeded. `if: always()` so it still runs (and can fail) when an
+  # upstream job fails or is cancelled.
+  ci:
+    name: ci
+    if: always()
+    needs: [lint, test, msrv, deny]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all jobs succeeded
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

@@ -9,7 +9,13 @@ rust-version = "1.95"
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/P4suta/claude-code-worklog"
+homepage = "https://github.com/P4suta/claude-code-worklog"
+documentation = "https://github.com/P4suta/claude-code-worklog"
+readme = "README.md"
 authors = ["cc-worklog contributors"]
+description = "Turn Claude Code session logs into daily and continuous work reports — no network, no LLM."
+keywords = ["claude", "claude-code", "worklog", "report", "cli"]
+categories = ["command-line-utilities", "development-tools"]
 
 [workspace.dependencies]
 # --- in-house crates ---
