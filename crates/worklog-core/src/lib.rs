@@ -15,22 +15,9 @@
 //! optional [`summarize::Summarizer`] seam exists for a future LLM pass, but the
 //! default [`summarize::NullSummarizer`] does nothing.
 //!
-//! ## Privacy
-//!
-//! Extraction is deliberately shallow. Only user prompt text (first line,
-//! truncated), tool *names*, and touched file paths are kept. Assistant reasoning
-//! and raw tool output — the usual homes for secrets — are never copied into the
-//! store or a report.
-//!
-//! ## Modules
-//!
-//! - [`paths`] — locate `~/.claude`, the transcripts, and the store.
-//! - [`transcript`] — parse a `.jsonl` file into [`transcript::RawEvent`]s.
-//! - [`digest`] — segment events into [`TurnEntry`]s and aggregate [`SessionDigest`]s.
-//! - [`store`] — append-only persistence of the bunpo stream.
-//! - [`report`] — render a daily report to Markdown.
-//! - [`memory`] — optional back-links from Claude Code memory files.
-//! - [`summarize`] — the (default no-op) summarizer seam.
+//! Extraction is deliberately shallow: only prompt first lines, tool names, and
+//! touched file paths are kept. Assistant reasoning and raw tool output — the
+//! usual homes for secrets — are never copied into the store or a report.
 
 pub mod baseline;
 pub mod digest;

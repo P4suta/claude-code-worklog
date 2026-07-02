@@ -9,19 +9,10 @@
 //!   reports/2026-06-27.md                     # rendered daily report (regenerable)
 //! ```
 //!
-//! ## Why one file per session
-//!
-//! Many Claude Code instances run at once — and in automated setups, a great
-//! many. A single shared day file would mean every hook from every instance
-//! contending on the same file (write races, and an O(n) dedup-scan per turn that
-//! degrades to O(n²) over a day). Sharding by session removes the shared resource
-//! entirely: a session's hooks only ever append to *its own* shard, which only it
-//! writes. There is no cross-process write contention to coordinate.
-//!
-//! Reads ([`Store::read_entries`]) fan in across all of a day's shards and are
-//! deliberately tolerant: a line that fails to parse — e.g. a partial final line
-//! a reader caught mid-append — is skipped, never fatal. Appends within a shard
-//! stay idempotent by turn `uuid`, so a hook that fires twice never double-counts.
+//! One file per session so concurrent Claude Code instances never contend on a
+//! shared file: a session's hooks only append to its own shard. Reads fan in
+//! across a day's shards and skip any unparsable line (e.g. a partial final line
+//! caught mid-append). Appends are idempotent by turn `uuid`.
 
 use std::path::{Path, PathBuf};
 

@@ -672,7 +672,6 @@ fn bump(counts: &mut Vec<ToolCount>, name: &str, count: u32) {
     }
 }
 
-/// Increment a file's churn tally by one.
 fn bump_file(counts: &mut Vec<FileCount>, file: &str) {
     bump_file_by(counts, file, 1);
 }

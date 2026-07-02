@@ -419,7 +419,6 @@ fn first_arg(after: &str) -> Option<String> {
     }
 }
 
-/// Push `n` copies of `action`.
 fn push_n(actions: &mut Vec<Action>, n: usize, action: Action) {
     actions.extend(std::iter::repeat_n(action, n));
 }

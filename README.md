@@ -34,11 +34,6 @@ work went:
   deviation from it — so a heavy churner isn't flagged for a routine day, and a
   quiet one is flagged when something spikes. `--no-baseline` falls back to absolutes.
 
-The structured Markdown is designed to be a *complete, human-readable artifact on
-its own* — and also clean input for an optional later LLM summarization pass (the
-[`Summarizer`](crates/worklog-core/src/summarize.rs) seam), rather than dumping raw
-logs at a model.
-
 For longer horizons, `worklog period` rolls the same exec view up over a **week**,
 **month**, or arbitrary **range**, and (unless `--no-trend`) appends a
 **prior-period delta** — overall and per project — so "did we speed up or slow
@@ -72,8 +67,7 @@ Claude Code writes a transcript per session at
 
 ## Concurrency
 
-Many Claude Code instances run at once — and in automated setups, a great many.
-The store is built for that:
+Many Claude Code instances run at once; the store is built for that:
 
 - **One shard file per session**, spread across 256 hash buckets
   (`entries/<date>/<bb>/<session-id>.ndjson`). A session's hooks only ever append

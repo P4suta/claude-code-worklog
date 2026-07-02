@@ -3,7 +3,7 @@
 //! Aggregates every turn in a date range through the same machinery as `daily`
 //! (so the outcome metrics and process spice roll up for free), and — unless
 //! `--no-trend` — compares against the immediately preceding period of equal
-//! length to show deltas (前期比).
+//! length to show prior-period deltas.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -85,9 +85,9 @@ struct Span {
     end: Date,
     /// Filename label, e.g. `2026-W26` / `2026-06` / `2026-06-21_2026-06-27`.
     label: String,
-    /// Human title, e.g. `週報 2026-06-21〜06-27`.
+    /// Human-readable report title.
     title: String,
-    /// Trend label, e.g. `先週比` / `先月比` / `前期比`.
+    /// Trend comparison label (week / month / range).
     trend_label: String,
     /// Whether the prior period is the previous calendar month.
     monthly: bool,
