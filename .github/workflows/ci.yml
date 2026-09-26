@@ -8,8 +8,8 @@
 #   - deny    : cargo-deny advisories / bans / licenses / sources.
 #   - ci      : single aggregate gate for branch protection.
 #
-# Third-party actions are pinned to a full commit SHA; the `# vX.Y.Z` trailer
-# is the human-readable tag. Dependabot (github-actions) bumps them weekly.
+# Third-party actions are pinned to a full commit SHA; the `# vX.Y.Z` trailer is the human-readable tag.
+# Renovate updates them under the shared repository policy.
 
 name: ci
 
@@ -115,12 +115,11 @@ jobs:
         with:
           command: check advisories bans licenses sources
 
-  # Conventional Commits (committed, config in committed.toml). PR-only, and
-  # skipped for Dependabot (its subjects exceed the 50-char limit and its PRs
-  # squash-merge under a maintainer subject).
+  # Conventional Commits (committed, config in committed.toml).
+  # This is PR-only and skips Renovate's generated dependency commits, whose subjects may exceed the repository's 50-character human-commit limit.
   commitlint:
     name: commitlint
-    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]'
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'renovate[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
