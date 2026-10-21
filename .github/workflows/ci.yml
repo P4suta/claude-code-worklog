@@ -48,8 +48,11 @@ jobs:
           esac
       - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
-          tool: actionlint@1.7.12,typos-cli@1.51.1,committed@1.1.11
-      - run: actionlint
+          tool: typos-cli@1.51.1,committed@1.1.11
+      - uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2.2.0
+        with:
+          version: "1.7.12"
+          pyflakes: false
       - run: typos
       - name: Check Conventional Commits
         if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'renovate[bot]'
