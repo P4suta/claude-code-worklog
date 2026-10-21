@@ -1,0 +1,17 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>P4suta/renovate-config"
+  ],
+  "packageRules": [
+    {
+      "description": "Keep the declared Rust 1.95 compatibility compiler while development pins update independently.",
+      "matchPackageNames": [
+        "rust",
+        "rust-lang/rust"
+      ],
+      "matchCurrentValue": "/^1\\.95(?:\\.0)?$/",
+      "allowedVersions": "1.95.0"
+    }
+  ]
+}

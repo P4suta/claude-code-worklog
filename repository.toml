@@ -1,0 +1,17 @@
+name = "cc-worklog"
+summary = "Generate work reports from Claude Code session logs"
+install = """
+git clone https://github.com/P4suta/claude-code-worklog.git
+cd claude-code-worklog
+cargo install --locked --path crates/worklog-cli
+"""
+usage = """
+worklog --help
+"""
+usage_language = "sh"
+copyright = "2026 cc-worklog contributors"
+license = "MIT OR Apache-2.0"
+
+[[consent]]
+contributor = "Yasunobu"
+evidence = "https://github.com/P4suta/claude-code-worklog/commit/867b33d726ce650eaeebebfbf9fe59fde6d0abf9"

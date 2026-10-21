@@ -594,7 +594,7 @@ mod tests {
             classify_command("gh pr create --base main"),
             vec![Action::PrCreated]
         );
-        assert!(classify_command("ls -la").is_empty());
+        assert_eq!(classify_command("ls -la"), Vec::<Action>::new());
     }
 
     #[test]

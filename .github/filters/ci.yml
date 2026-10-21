@@ -1,0 +1,13 @@
+code:
+  - 'crates/**'
+  - 'Cargo.toml'
+  - 'Cargo.lock'
+  - 'rust-toolchain.toml'
+  - 'Justfile'
+  - 'clippy.toml'
+  - 'rustfmt.toml'
+  - 'deny.toml'
+  - '.cargo/**'
+  - '.github/workflows/ci.yml'
+  - '.github/workflows/release.yml'
+  - '.github/filters/ci.yml'

@@ -8,11 +8,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Cross-platform CI (Linux/Windows/macOS test matrix), an MSRV build check, a
-  weekly advisory scan, CodeQL analysis, and a single aggregate `ci` gate.
-- Tag-driven release workflow producing signed-provenance binary archives for
-  four targets, each bundling shell completions and man pages.
+- Cross-platform tests, Rust 1.95 compatibility checks, dependency assurance, and change-selected security analysis.
+- Tag-driven release workflow producing signed-provenance binary archives for four targets, each bundling shell completions and man pages.
 - Dependabot (cargo + github-actions), community docs, and issue/PR templates.
+
+### Changed
+
+- Update table rendering to comfy-table 8 while keeping CLI commands and stored data formats.
+- Pin the development compiler and select verification by affected inputs.
+- Replace repeated and scheduled verification with pull request checks and manual audits.
+- Provide a concise generated README and a separate operating guide.
 
 ## [0.1.0] - 2026-07-02
 

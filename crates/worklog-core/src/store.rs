@@ -399,7 +399,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let store = Store::new(tmp.path());
         let date: Date = "2020-01-01".parse().unwrap();
-        assert!(store.read_entries(date).unwrap().is_empty());
+        assert_eq!(store.read_entries(date).unwrap(), Vec::<TurnEntry>::new());
     }
 
     #[test]
