@@ -1,48 +1,48 @@
 # Contributing to cc-worklog
 
-Thanks for your interest! This is a small, focused Rust project. The bar is
-simple: keep it fast, dependency-light, and privacy-preserving.
+Use Rust 1.99.1 and just 1.59.0.
+The workspace's supported compiler floor remains Rust 1.95.
+The repository pins the development toolchain in `rust-toolchain.toml`.
 
-## Development setup
-
-Requires a stable Rust toolchain (the repo pins one via `rust-toolchain.toml`)
-and [`just`](https://github.com/casey/just). Optional tooling — `lefthook`,
-`typos`, `taplo`, `cargo-deny`, `cargo-machete`, `cargo-sort` — is used by the
-lint recipe and git hooks.
+## Checks
 
 ```sh
-just build            # cargo build --workspace --all-targets
-just test             # unit + integration + doc tests
-just lint             # fmt --check + clippy -D warnings + deny + typos + machete
-just fmt              # auto-format (rustfmt + taplo + cargo-sort + typos)
-just hooks            # install the lefthook git hooks (runs the above pre-commit/push)
+just build
+just lint
+just test
 ```
 
-Please run `just lint` and `just test` before opening a PR — CI runs the same
-checks across Linux, Windows, and macOS, plus an MSRV build.
+Linting uses rustfmt, strict Clippy, cargo-deny, typos, and cargo-machete.
+CI pins cargo-deny 0.20.2, cargo-machete 0.9.2, and typos 1.51.1.
+The checked commands use the committed lockfile.
+The dependency check covers all features, advisories, licenses, bans, and sources.
 
-## Guidelines
+Native tests run on Linux, Windows, and macOS for affected Rust inputs.
+A separate Linux job checks all targets with Rust 1.95.0.
+Documentation changes keep fast workflow, spelling, and commit checks.
+The [verification decision](docs/adr/verification-contracts.md) describes that selection.
 
-- **Match the surrounding code.** Naming, comment density, and idioms should be
-  indistinguishable from what's already there.
-- **Keep the privacy invariants.** Never store raw shell commands, assistant
-  reasoning, or raw tool output — only classified outcomes, prompt first-lines,
-  tool names, and file paths. See the README's "Privacy-first" section.
-- **No network, no LLM in the default path.** The optional `Summarizer` seam
-  (`crates/worklog-core/src/summarize.rs`) exists for a future opt-in pass and
-  must stay inert by default.
-- **Commits** follow [Conventional Commits](https://www.conventionalcommits.org/)
-  (`feat:`, `fix:`, `docs:`, `ci:`, `refactor:`, …). Keep the subject ≤ 50 chars.
-- **Add tests** for behavior changes; extraction/classification logic is heavily
-  unit-tested (`crates/worklog-core/src/*`).
+`just fmt` applies the existing formatters.
+`just hooks` installs the project's hooks when no shared dispatcher already manages them.
 
-## Releasing (maintainers)
+## Changes
 
-Push a `vX.Y.Z` tag — `release.yml` builds the cross-platform binaries and
-publishes a draft GitHub Release with a `SHA256SUMS.txt` and a Sigstore
-build-provenance attestation. Update `CHANGELOG.md` in the same change.
+Keep changes small and match surrounding code.
+Add meaningful tests for changed behavior.
+Keep the existing stored-data formats and [privacy behavior](docs/usage.md#privacy).
+Keep the default summarizer local and deterministic.
 
-## License
+Use Conventional Commits and keep the subject within 50 characters.
+Update the changelog for user-visible changes.
+Keep the README concise and operating details in [the usage guide](docs/usage.md).
 
-By contributing you agree that your contributions are dual-licensed under
-MIT OR Apache-2.0, matching the project.
+Dependency updates inherit the shared Renovate preset.
+The Rust 1.95.0 compiler is a compatibility target, so its update constraint changes with the declared compiler floor.
+Normal development and release compiler pins update independently.
+
+## Releases and license
+
+The version-tag workflow builds the existing four native targets and creates draft release assets with checksums and provenance.
+Maintenance verification has no release publication authority.
+
+Contributions keep the project's existing dual license, MIT OR Apache-2.0.

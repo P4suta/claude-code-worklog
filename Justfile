@@ -3,17 +3,19 @@
 # This tool only ever reads ~/.claude data and writes to its own store, so no
 # recipe needs secrets. Pure dev recipes (build/test/lint) run plainly.
 
+set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-Command"]
+
 default:
     @just --list
 
 # ----- build / test -----
 
 build:
-    cargo build --workspace --all-targets
+    cargo build --locked --workspace --all-targets
 
 test:
-    cargo test --workspace
-    cargo test --doc --workspace
+    cargo test --locked --workspace
+    cargo test --locked --doc --workspace
 
 # ----- quality gates -----
 
@@ -25,13 +27,13 @@ fmt:
 
 lint:
     cargo fmt --all -- --check
-    cargo clippy --workspace --all-targets -- -D warnings
-    cargo deny check advisories bans licenses sources
+    cargo clippy --locked --workspace --all-targets -- -D warnings
+    cargo deny --locked --all-features check advisories bans licenses sources
     typos
     cargo machete
 
 clippy:
-    cargo clippy --workspace --all-targets -- -D warnings
+    cargo clippy --locked --workspace --all-targets -- -D warnings
 
 # ----- usage -----
 

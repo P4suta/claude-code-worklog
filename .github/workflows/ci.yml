@@ -1,166 +1,151 @@
-# cc-worklog CI.
-#
-# Layers, cheapest first:
-#   - lint    : fmt / clippy / typos / machete on ubuntu (fast fail).
-#   - test    : cargo test across ubuntu + windows + macos (paths.rs and the
-#               CLI touch OS-specific path handling, so all three matter).
-#   - msrv    : the pinned MSRV (1.95.0) still builds.
-#   - deny    : cargo-deny advisories / bans / licenses / sources.
-#   - ci      : single aggregate gate for branch protection.
-#
-# Third-party actions are pinned to a full commit SHA; the `# vX.Y.Z` trailer is the human-readable tag.
-# Renovate updates them under the shared repository policy.
-
 name: ci
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-
 env:
   CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: 2
   RUST_BACKTRACE: "1"
 
 jobs:
-  lint:
-    name: fmt + clippy + typos + machete
+  quality:
+    name: Workflow and source checks
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.changes.outputs.code }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          toolchain: stable
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: changes
+        with:
+          base: ${{ github.event.merge_group.base_sha || github.event.repository.default_branch }}
+          filters: .github/filters/ci.yml
+      - name: Validate selection output
+        env:
+          CODE_FILTER: ${{ steps.changes.outputs.code }}
+        run: |
+          case "$CODE_FILTER" in
+            true|false) ;;
+            *) exit 1 ;;
+          esac
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+        with:
+          tool: typos-cli@1.51.1,committed@1.1.11
+      - uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2.2.0
+        with:
+          version: "1.7.12"
+          pyflakes: false
+      - run: typos
+      - name: Check Conventional Commits
+        if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'renovate[bot]'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git rev-list --no-merges "$BASE_SHA..$HEAD_SHA" | xargs -rn1 committed
+
+  verify:
+    name: Rust lint and dependency assurance
+    needs: [quality]
+    if: needs.quality.outputs.code == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: 1.99.1
           components: rustfmt, clippy
-
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-
-      - name: Install typos + cargo-machete
-        uses: taiki-e/install-action@16b05812d776ae1dfaabc8277e421fb6d2506419 # v2.82.7
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
-          tool: typos-cli, cargo-machete
-
-      - name: rustfmt
-        run: cargo fmt --all -- --check
-
-      - name: clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
-
-      - name: typos
-        run: typos
-
-      - name: cargo-machete
-        run: cargo machete
+          tool: just@1.59.0,cargo-deny@0.20.2,cargo-machete@0.9.2,typos-cli@1.51.1
+      - run: just lint
 
   test:
-    name: test (${{ matrix.os }})
+    name: Native tests (${{ matrix.os }})
+    needs: [quality]
+    if: needs.quality.outputs.code == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          toolchain: stable
-
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-
-      - name: test
-        run: |
-          cargo test --workspace
-          cargo test --doc --workspace
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: 1.99.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+        with:
+          tool: just@1.59.0
+      - run: just test
 
   msrv:
-    name: msrv (rust 1.95.0)
+    name: Rust 1.95 compatibility
+    needs: [quality]
+    if: needs.quality.outputs.code == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    # RUSTUP_TOOLCHAIN outranks rust-toolchain.toml (which pins `stable`), so
-    # the build genuinely exercises a clean rustc 1.95.0 — the declared MSRV.
+    timeout-minutes: 15
     env:
       RUSTUP_TOOLCHAIN: 1.95.0
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Install Rust 1.95.0 (MSRV)
-        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
           toolchain: 1.95.0
-
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: msrv
+      - run: cargo check --locked --workspace --all-targets
 
-      - name: cargo check
-        run: cargo check --workspace --all-targets
-
-  deny:
-    name: cargo-deny
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - uses: EmbarkStudios/cargo-deny-action@bb137d7af7e4fb67e5f82a49c4fce4fad40782fe # v2.0.20
-        with:
-          command: check advisories bans licenses sources
-
-  # Conventional Commits (committed, config in committed.toml).
-  # This is PR-only and skips Renovate's generated dependency commits, whose subjects may exceed the repository's 50-character human-commit limit.
-  commitlint:
-    name: commitlint
-    if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'renovate[bot]'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0
-      - uses: taiki-e/install-action@16b05812d776ae1dfaabc8277e421fb6d2506419 # v2.82.7
-        with:
-          tool: committed
-      - name: Check Conventional Commits
-        run: |
-          base='${{ github.event.pull_request.base.sha }}'
-          head='${{ github.event.pull_request.head.sha }}'
-          git rev-list --no-merges "$base..$head" | xargs -rn1 committed
-
-  # Single required check for branch protection: green only when every needed
-  # job succeeded. `if: always()` so it still runs (and can fail) when an
-  # upstream job fails or is cancelled.
-  ci:
-    name: ci
-    if: always()
-    needs: [lint, test, msrv, deny, commitlint]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Verify all jobs succeeded
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
-        run: exit 1
-
-  # The one status check branch protection requires,
-  # named the same in every P4suta repository.
-  # It passes only when every job it needs succeeded or was skipped.
   required:
     name: required
     if: always()
-    needs: [ci]
+    needs: [quality, verify, test, msrv]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions: {}
     steps:
-      - name: Fail unless every needed job succeeded or was skipped
+      - name: Verify every selected result
         env:
-          RESULTS: ${{ toJSON(needs.*.result) }}
+          RESULTS: ${{ toJSON(needs) }}
+          CODE_SELECTED: ${{ needs.quality.outputs.code }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          echo "${RESULTS}"
-          jq -e 'all(.[]; IN("success", "skipped"))' <<< "${RESULTS}"
+          set -euo pipefail
+          jq -e --arg code "$CODE_SELECTED" --arg event "$EVENT_NAME" '
+            ($code == "true" or $code == "false") and
+            .quality.result == "success" and
+            (.verify.result == (if $code == "true" or $event == "workflow_dispatch"
+              then "success" else "skipped" end)) and
+            (.test.result == (if $code == "true" or $event == "workflow_dispatch"
+              then "success" else "skipped" end)) and
+            (.msrv.result == (if $code == "true" or $event == "workflow_dispatch"
+              then "success" else "skipped" end))
+            ' <<< "$RESULTS"
