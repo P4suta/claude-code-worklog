@@ -13,6 +13,8 @@ use tracing::debug;
 
 use crate::error::{CoreError, Result};
 
+const PR_NUMBER_LOOKAHEAD: usize = 6;
+
 /// One tool invocation extracted from an assistant turn.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolUse {
@@ -457,7 +459,7 @@ fn pr_number_after(rest: &str) -> Option<u32> {
     let segment = rest.split(['\n', ';', '&', '|']).next().unwrap_or(rest);
     segment
         .split_whitespace()
-        .take(6)
+        .take(PR_NUMBER_LOOKAHEAD)
         .find_map(|tok| tok.trim_start_matches('#').parse().ok())
 }
 
